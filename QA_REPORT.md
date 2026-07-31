@@ -81,7 +81,8 @@
 - 추천은 최근 핵심 등장 총횟수, 등장 핵심 수, 계절 불일치, 핵심 색상, last worn, ID 순으로 사전식 정렬한다.
 - 신발 등 보조 아이템은 핵심 색상 조화 판정을 바꾸지 않는다.
 - 신규 옷은 사진이 필수이며 무사진 제출은 IndexedDB write를 시작하지 않는다.
-- 추천을 3개씩 탐색하고 소진 후 처음부터 볼 수 있다.
+- 20개를 넘는 모든 추천 후보를 3개씩 탐색하고 소진 안내 후 처음부터 볼 수 있다.
+- 계절·색상 확인 필요 안내를 실제 추천 카드에 표시하고 하단 내비게이션은 명세대로 3개로 제한한다.
 - 초안을 같은 ID로 수정하고 실제 착용으로 확정하며 새로고침 후 유지한다.
 - 옷은 `deletedAt` 소프트 삭제하고 새 선택·추천에서 제외하되 과거 snapshot과 export 레코드는 보존한다.
 
@@ -90,11 +91,11 @@
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 8 files, 36 tests 통과 |
+| `npm test -- --reporter=verbose` | 8 files, 37 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 229.10 KiB |
-| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 4/4 통과 |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 229.63 KiB |
+| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 5/5 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
 | 전체 `npm audit` | high 11, critical 0; 모두 개발 도구 체인. 직접 의존성 `eslint`, `vite-plugin-pwa` 포함 |
@@ -117,7 +118,8 @@
 | 핵심 흐름 | 옷 3개 → 착장 → 동일 조합 경고 → override 저장 → 다른 추천 성공 |
 | 빈 옷장·빈 기록·추천 없음 | 각 빈 상태와 다음 행동 정상 표시 |
 | 원피스만 | 원피스 단독 추천 성공 |
-| 후보 탐색 | 3개 단위 다음 후보, 마지막 페이지, 처음부터 보기 |
+| 후보 탐색 | 20개 초과 후보 반환, 3개 단위 다음 후보, 소진 문구, 처음부터 보기 |
+| 추천 안내·내비게이션 | 계절/색상 확인 문구 표시, 하단 탭 3개와 헤더 설정 접근 |
 | 초안·착장 수정 | 초안 수정, DRAFT→CONFIRMED 확정, 새로고침 지속 |
 | 삭제된 아이템 기록 | `deletedAt` 레코드는 보존되고 옷장·새 선택·추천에서는 제외되며 과거 snapshot 이름은 유지 |
 | 전체 삭제 | 확인 문구 입력 후 삭제, 새로고침 뒤 빈 상태 유지 |

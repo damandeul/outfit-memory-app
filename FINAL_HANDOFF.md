@@ -25,10 +25,11 @@
 - 착장 기록·사진·snapshot·중복 경고·명시적 override
 - 추천 초안 저장, 초안 수정, 실제 착용 확정, 확정 착장 수정
 - 같은 만남의 대상일 이전 확정 기록 최근 4회 계산
-- 계절 fallback을 포함한 결정적 사전식 추천
+- 계절 fallback·계절/색상 확인 안내를 포함한 결정적 사전식 추천
 - 핵심 아이템 기준 색상 조화와 과거 핵심 조합 제외
-- 후보 3개 단위 탐색, 다음 후보와 처음부터 보기
+- 모든 후보의 3개 단위 탐색, 소진 안내, 처음부터 보기
 - 사진 제외 JSON 메타데이터 내보내기와 확인 문구 기반 전체 삭제
+- 명세에 맞춘 하단 내비게이션 3개와 헤더 설정 접근
 - 390/768/1440 반응형, 44px 터치 영역, PWA 오프라인 앱 셸
 
 ## 3. 독립 적대 감수에서 발견된 P0 7건과 조치
@@ -47,12 +48,12 @@
 
 | 게이트 | 실제 결과 |
 |---|---|
-| `npm test -- --reporter=verbose` | **8 files, 36/36 통과** |
+| `npm test -- --reporter=verbose` | **8 files, 37/37 통과** |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
 | `npm run build` | 통과, 36 modules |
-| PWA build | precache 7 entries / **229.10 KiB** |
-| `npm run test:e2e` | 모바일 Chromium **4/4 통과** |
+| PWA build | precache 7 entries / **229.63 KiB** |
+| `npm run test:e2e` | 모바일 Chromium **5/5 통과** |
 | `npm run test:qa` | fresh production Chromium **7/7 통과** |
 | `npm audit --omit=dev` | production 취약점 **0** |
 

@@ -110,8 +110,8 @@ export function recommend(
   outfits: Outfit[],
   input: RecommendInput,
 ): Recommendation[] {
-  if (!Number.isFinite(input.limit) || input.limit < 1 || input.limit > 20) {
-    throw new Error('limit must be 1..20');
+  if (!Number.isFinite(input.limit) || input.limit < 1) {
+    throw new Error('limit must be at least 1');
   }
 
   const active = garments.filter(

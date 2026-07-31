@@ -32,15 +32,15 @@ React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 사진
 ## 최종 검증
 
 - `npm ci`: 성공, 539 packages 설치
-- `npm test`: 8 files, 36 tests PASS
-- `npm run test:e2e`: mobile Chromium 4/4 PASS
+- `npm test`: 8 files, 37 tests PASS
+- `npm run test:e2e`: mobile Chromium 5/5 PASS
 - `npm run test:qa`: fresh production Chromium 7/7 PASS
 - `npm run lint`: PASS
 - `npm run typecheck`: PASS
 - `npm run build`: PASS
   - 36 modules transformed
   - `dist/index.html`, JS/CSS, `manifest.webmanifest`, `sw.js`, Workbox 생성
-  - precache 7 entries, 229.10 KiB
+  - precache 7 entries, 229.63 KiB
 - `npm audit --omit=dev`: production dependencies 취약점 0
 - 반응형: E2E에서 390px와 768px `scrollWidth <= clientWidth` 확인
 - 지속성: E2E에서 옷 3개와 착장 저장 후 새로고침 조회 확인
