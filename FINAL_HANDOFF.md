@@ -28,6 +28,7 @@
 - 계절 fallback·계절/색상 확인 안내를 포함한 결정적 사전식 추천
 - 핵심 아이템 기준 색상 조화와 과거 핵심 조합 제외
 - 모든 후보의 3개 단위 탐색, 소진 안내, 처음부터 보기
+- 후보가 없을 때 부족 핵심 카테고리 또는 과거 핵심 조합 제외 원인 안내
 - 사진 제외 JSON 메타데이터 내보내기와 확인 문구 기반 전체 삭제
 - 명세에 맞춘 하단 내비게이션 3개와 헤더 설정 접근
 - 390/768/1440 반응형, 44px 터치 영역, PWA 오프라인 앱 셸
@@ -48,12 +49,12 @@
 
 | 게이트 | 실제 결과 |
 |---|---|
-| `npm test -- --reporter=verbose` | **8 files, 37/37 통과** |
+| `npm test -- --reporter=verbose` | **8 files, 38/38 통과** |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
 | `npm run build` | 통과, 36 modules |
-| PWA build | precache 7 entries / **229.63 KiB** |
-| `npm run test:e2e` | 모바일 Chromium **5/5 통과** |
+| PWA build | precache 7 entries / **230.08 KiB** |
+| `npm run test:e2e` | 모바일 Chromium **6/6 통과** |
 | `npm run test:qa` | fresh production Chromium **7/7 통과** |
 | `npm audit --omit=dev` | production 취약점 **0** |
 

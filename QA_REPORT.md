@@ -84,6 +84,8 @@
 - 20개를 넘는 모든 추천 후보를 3개씩 탐색하고 소진 안내 후 처음부터 볼 수 있다.
 - 계절·색상 확인 필요 안내를 실제 추천 카드에 표시하고 하단 내비게이션은 명세대로 3개로 제한한다.
 - 초안을 같은 ID로 수정하고 실제 착용으로 확정하며 새로고침 후 유지한다.
+- 초안 확정 시 동일 ID·`createdAt`을 보존하고 `drafts`에서 `outfits`로 이동하는 저장소 상태를 직접 검증한다.
+- 추천 결과가 없으면 부족 핵심 카테고리 또는 과거 핵심 조합 제외 원인을 안내한다.
 - 옷은 `deletedAt` 소프트 삭제하고 새 선택·추천에서 제외하되 과거 snapshot과 export 레코드는 보존한다.
 
 ## 3. 최종 품질 게이트
@@ -91,11 +93,11 @@
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 8 files, 37 tests 통과 |
+| `npm test -- --reporter=verbose` | 8 files, 38 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 229.63 KiB |
-| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 5/5 통과 |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 230.08 KiB |
+| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 6/6 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
 | 전체 `npm audit` | high 11, critical 0; 모두 개발 도구 체인. 직접 의존성 `eslint`, `vite-plugin-pwa` 포함 |
@@ -120,6 +122,7 @@
 | 원피스만 | 원피스 단독 추천 성공 |
 | 후보 탐색 | 20개 초과 후보 반환, 3개 단위 다음 후보, 소진 문구, 처음부터 보기 |
 | 추천 안내·내비게이션 | 계절/색상 확인 문구 표시, 하단 탭 3개와 헤더 설정 접근 |
+| 후보 없음 안내 | 부족 핵심 카테고리 또는 과거 핵심 조합 제외 원인 표시 |
 | 초안·착장 수정 | 초안 수정, DRAFT→CONFIRMED 확정, 새로고침 지속 |
 | 삭제된 아이템 기록 | `deletedAt` 레코드는 보존되고 옷장·새 선택·추천에서는 제외되며 과거 snapshot 이름은 유지 |
 | 전체 삭제 | 확인 문구 입력 후 삭제, 새로고침 뒤 빈 상태 유지 |

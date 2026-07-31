@@ -58,6 +58,16 @@ test('계절·색상 확인 안내와 3개 하단 내비게이션을 제공한�
   await expect(page.getByText('색상 조합은 직접 확인해 주세요')).toBeVisible();
 });
 
+test('추천할 핵심 카테고리가 부족하면 원인과 다음 행동을 보여준다', async ({ page }) => {
+  await page.goto('/');
+  await addWithPhoto(page, '상의만 있음', 'TOP');
+  await page.getByRole('button', { name: '다음 만남' }).click();
+  await page.getByLabel('어떤 만남이야?').fill('후보 없음 QA');
+  await page.getByRole('button', { name: '코디 추천받기' }).click();
+  await expect(page.getByRole('heading', { name: '추천할 후보가 없어' })).toBeVisible();
+  await expect(page.getByText(/하의 또는 원피스/)).toBeVisible();
+});
+
 test('추천 초안은 기록에서 실제 착용 확정 및 수정할 수 있다', async ({ page }) => {
   await page.goto('/');
   await addWithPhoto(page, '초안 상의', 'TOP');
