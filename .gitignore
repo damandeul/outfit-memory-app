@@ -1,0 +1,10 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+artifacts/qa/playwright-report/
+artifacts/qa/playwright-results.json
+*.tsbuildinfo
+vite.config.js
+playwright.config.js
+.DS_Store

@@ -1,0 +1,108 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const db = vi.hoisted(() => ({
+  clearAll: vi.fn(),
+  deleteGarment: vi.fn(),
+  deleteOutfit: vi.fn(),
+  exportMetadata: vi.fn(),
+  getGarments: vi.fn(),
+  getOutfits: vi.fn(),
+  saveGarment: vi.fn(),
+  saveOutfit: vi.fn(),
+}));
+const image = vi.hoisted(() => ({ compressPhoto: vi.fn() }));
+
+vi.mock('./db', () => db);
+vi.mock('./image', () => image);
+
+import App from './App';
+import type { Garment, Outfit } from './types';
+
+const now = '2026-07-30T00:00:00.000Z';
+const top: Garment = {
+  id: 'top', name: '검정 크롭티', category: 'TOP', color: 'BLACK', seasons: ['ALL'], note: '',
+  status: 'ACTIVE', mainMediaId: null, createdAt: now, updatedAt: now,
+};
+const bottom: Garment = {
+  id: 'bottom', name: '청바지', category: 'BOTTOM', color: 'BLUE', seasons: ['ALL'], note: '',
+  status: 'ACTIVE', mainMediaId: null, createdAt: now, updatedAt: now,
+};
+const prior: Outfit = {
+  id: 'prior', localDate: '2026-07-01', contextName: '목요일 방송댄스', contextKey: '목요일 방송댄스',
+  note: '', fullMediaId: null, items: [
+    { garmentId: top.id, name: top.name, category: top.category, color: top.color },
+    { garmentId: bottom.id, name: bottom.name, category: bottom.category, color: bottom.color },
+  ], garmentIds: ['bottom', 'top'], combinationKey: 'bottom|top', status: 'CONFIRMED', ruleVersion: 1,
+  createdAt: now, updatedAt: now,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  db.getGarments.mockResolvedValue([]);
+  db.getOutfits.mockResolvedValue([]);
+  db.saveGarment.mockResolvedValue('id');
+  db.saveOutfit.mockResolvedValue('id');
+  db.clearAll.mockResolvedValue(undefined);
+  db.exportMetadata.mockResolvedValue({});
+  image.compressPhoto.mockResolvedValue(undefined);
+});
+
+describe('recoverable storage and photo failures', () => {
+  it('shows an IndexedDB load failure and can retry without a blank crash', async () => {
+    db.getGarments.mockRejectedValueOnce(new Error('database unavailable'));
+    render(<App />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장한 기록을 불러오지 못했어');
+    fireEvent.click(screen.getByRole('button', { name: '다시 불러오기' }));
+    expect(await screen.findByText('아직 등록한 옷이 없어')).toBeInTheDocument();
+  });
+
+  it('keeps garment input and re-enables save when IndexedDB write fails', async () => {
+    db.saveGarment.mockRejectedValueOnce(new Error('quota'));
+    render(<App />);
+    await screen.findByText('아직 등록한 옷이 없어');
+    fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
+    fireEvent.change(screen.getByLabelText('옷 이름'), { target: { value: '검정 크롭티' } });
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어');
+    expect(screen.getByLabelText('옷 이름')).toHaveValue('검정 크롭티');
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
+  });
+
+  it('shows outfit photo decode failure while preserving date, context and selections', async () => {
+    db.getGarments.mockResolvedValue([top]);
+    image.compressPhoto.mockRejectedValueOnce(new Error('이 사진을 열지 못했어.'));
+    render(<App />);
+    await screen.findByText('검정 크롭티');
+    fireEvent.click(screen.getByRole('button', { name: '기록' }));
+    fireEvent.click(screen.getByRole('button', { name: '착장 기록' }));
+    fireEvent.change(screen.getByLabelText('만남이나 수업 이름'), { target: { value: '목요일 방송댄스' } });
+    fireEvent.click(screen.getByLabelText('검정 크롭티'));
+    const file = new File(['broken'], 'broken.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('전체 착장 사진 (선택)'), { target: { files: [file] } });
+    expect(await screen.findByRole('alert')).toHaveTextContent('이 사진을 열지 못했어');
+    expect(screen.getByLabelText('만남이나 수업 이름')).toHaveValue('목요일 방송댄스');
+    expect(screen.getByLabelText('검정 크롭티')).toBeChecked();
+  });
+
+  it('saves a warned duplicate only once when the confirmation is clicked repeatedly', async () => {
+    db.getGarments.mockResolvedValue([top, bottom]);
+    db.getOutfits.mockResolvedValue([prior]);
+    let resolveSave!: () => void;
+    db.saveOutfit.mockImplementation(() => new Promise<void>(resolve => { resolveSave = resolve; }));
+    render(<App />);
+    await screen.findByText('검정 크롭티');
+    fireEvent.click(screen.getByRole('button', { name: '기록' }));
+    fireEvent.click(screen.getByRole('button', { name: '착장 기록' }));
+    fireEvent.change(screen.getByLabelText('만남이나 수업 이름'), { target: { value: '목요일 방송댄스' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /검정 크롭티/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /청바지/ }));
+    fireEvent.click(screen.getByRole('button', { name: '중복 확인하고 저장' }));
+    const confirm = await screen.findByRole('button', { name: '그대로 저장' });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    expect(db.saveOutfit).toHaveBeenCalledTimes(1);
+    resolveSave();
+    await waitFor(() => expect(db.getOutfits).toHaveBeenCalled());
+  });
+});

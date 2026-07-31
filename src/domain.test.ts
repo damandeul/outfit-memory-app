@@ -1,0 +1,10 @@
+import { describe, expect, it } from 'vitest'; import { canonicalIds, duplicateCheck, recentFour, recommend } from './domain'; import type {Garment, Outfit} from './types';
+const g=(id:string,category:Garment['category'],extra:Partial<Garment>={}):Garment=>({id,name:id,category,color:'BLACK',seasons:['ALL'],note:'',status:'ACTIVE',mainMediaId:null,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z',...extra});
+const o=(id:string,ids:string[],date='2026-07-01',context='dance',createdAt='2026-07-01T00:00:00Z'):Outfit=>({id,localDate:date,contextName:context,contextKey:context,note:'',fullMediaId:null,items:ids.map(x=>({garmentId:x,name:x,category:'TOP',color:'BLACK'})),garmentIds:canonicalIds(ids),combinationKey:canonicalIds(ids).join('|'),status:'CONFIRMED',ruleVersion:1,createdAt,updatedAt:createdAt});
+describe('domain',()=>{
+it('ID 순서와 중복을 제거해 동일 조합을 만든다',()=>expect(canonicalIds(['b','a','a',''])).toEqual(['a','b']));
+it('같은 만남의 완전 동일과 핵심 동일을 구분한다',()=>{const history=[o('1',['top','bottom','shoe'])]; expect(duplicateCheck(['shoe','bottom','top'],'dance',history,{top:'TOP',bottom:'BOTTOM',shoe:'SHOES'}).kind).toBe('exact'); expect(duplicateCheck(['top','bottom'],'dance',history,{top:'TOP',bottom:'BOTTOM',shoe:'SHOES'}).kind).toBe('core')});
+it('대상일 이전 같은 만남의 최근 4회만 고른다',()=>{const all=[1,2,3,4,5].map(n=>o(String(n),['x'],`2026-07-0${n}`)); all.push(o('other',['x'],'2026-07-06','other')); expect(recentFour(all,'dance','2026-07-07').map(x=>x.id)).toEqual(['5','4','3','2'])});
+it('활성 상의와 하의로 결정적 추천을 만들고 과거 핵심 조합을 제외한다',()=>{const garments=[g('t1','TOP'),g('t2','TOP'),g('b1','BOTTOM'),g('old','BOTTOM',{status:'ARCHIVED'})]; const first=recommend(garments,[o('past',['t1','b1'])],{contextName:'dance',targetLocalDate:'2026-07-10',limit:3}); expect(first.map(x=>x.garmentIds)).toEqual([['b1','t2']]); expect(recommend([...garments].reverse(),[o('past',['t1','b1'])],{contextName:'dance',targetLocalDate:'2026-07-10',limit:3})).toEqual(first)});
+it('원피스 하나만으로 후보를 만든다',()=>expect(recommend([g('dress','DRESS')],[],{contextName:'dance',targetLocalDate:'2026-07-10',limit:3})[0].garmentIds).toEqual(['dress']));
+});

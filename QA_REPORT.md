@@ -1,0 +1,136 @@
+# 안겹쳐 독립 QA 보고서
+
+- 검수 시각: 2026-07-30 23:58 KST
+- 대상: `/Users/damandeul/다만들/ai-company/outfit-memory-app`
+- 판정: **수정 후 통과 — 로컬 production artifact 기준**
+- 금지사항 준수: 배포, 커밋, 푸시, 유료 API 호출을 실행하지 않음
+
+## 1. 독립 검수 범위
+
+`BRIEF.md`, `RESEARCH.md`, `PRODUCT_SPEC.md`, `UX_SPEC.md`, `DATA_RULES.md`, `BUILD_REPORT.md`를 읽고 구현자의 자기보고와 별개로 의존성 설치, 단위·통합 테스트, lint, typecheck, production build, 기존 E2E, 별도 production browser QA를 직접 실행했다.
+
+브라우저 QA는 production `dist/`를 `vite preview`로 제공한 Chromium에서 실행했다. 390×844, 768×900, 1440×1000 뷰포트와 오프라인 service worker 재로딩을 포함한다.
+
+## 2. 발견 결함과 수정
+
+### F-1. 허용하지 않는 `image/*` MIME이 디코더까지 도달함 — 수정 완료
+
+- 기존 동작: `file.type.startsWith('image/')`만 검사해 `image/svg+xml` 같은 비허용 형식도 `createImageBitmap`으로 전달됐다.
+- RED: `src/image.test.ts`의 “허용하지 않는 image MIME은 디코딩 전에 거절한다”가 실패했고, 디코더 mock 반환값 접근 중 TypeError를 재현했다.
+- 수정: JPEG, PNG, WebP, HEIC, HEIF 명시 allowlist를 추가했다.
+- GREEN: 비허용 MIME 사전 거절, 25 MiB 초과 사전 거절, 허용 형식 디코딩 실패의 사용자 오류 변환 3개 테스트가 통과했다.
+
+### F-2. README 개인정보 설명이 제거된 Google Fonts 요청을 계속 언급함 — 수정 완료
+
+현재 production CSS와 privacy test는 외부 폰트를 사용하지 않는다. README의 오래된 Google Fonts 설명을 시스템 글꼴·외부 SDK 미사용 사실에 맞게 수정했다.
+
+### F-3. 독립 QA suite가 기본 E2E 명령에도 포함됨 — 수정 완료
+
+별도 production QA suite를 추가한 뒤 기본 `npm run test:e2e`가 QA용 origin/service worker 전제를 함께 실행해 실패하는 것을 재현했다. 기본 Playwright 설정에서 `qa.spec.ts`를 제외하고, production QA는 `playwright.qa.config.ts`로만 실행하도록 분리했다. 이후 두 명령을 각각 다시 실행해 모두 통과했다.
+
+### F-4. IndexedDB 실패가 처리되지 않아 폼이 잠기거나 빈 화면이 될 수 있음 — 수정 완료
+
+- 초기 조회 실패를 visible `role="alert"`와 `다시 불러오기`로 복구한다.
+- 옷·착장 저장 실패는 입력을 유지하고 저장 버튼을 다시 활성화한다.
+- 옷 보관/삭제, 착장 삭제, JSON 내보내기, 전체 삭제 실패도 사용자에게 오류를 표시한다.
+- 회귀 테스트에서 초기 load rejection과 garment write rejection을 직접 주입해 통과했다.
+
+### F-5. 착장 사진 디코딩 rejection과 중복 저장 경합 — 수정 완료
+
+- 착장 사진 처리에 `try/catch/finally`와 processing 상태를 추가해 decode 실패를 폼 안의 복구 가능한 오류로 표시한다.
+- `useRef` 기반 동기 save lock과 disabled 상태로 중복 경고의 `그대로 저장` 및 일반 submit 연타가 IndexedDB write를 두 번 시작하지 않게 했다.
+- 두 결함 모두 실패 주입/연속 클릭 회귀 테스트가 통과했다.
+
+### F-6. production QA가 stale `dist/`를 검사할 수 있음 — 수정 완료
+
+`npm run test:qa`를 `npm run build && playwright test -c playwright.qa.config.ts`로 고정하고 정적 회귀 테스트를 추가했다. 최종 QA는 이 명령으로 fresh build 후 7/7 통과했다.
+
+### F-7. stale JavaScript 설정 복사본이 TypeScript 설정과 충돌할 수 있음 — 수정 완료
+
+`vite.config.js`와 `playwright.config.js`가 최신 `.ts` 설정과 다른 내용으로 남아 있었다. 도구별 권위 설정을 TypeScript 파일 하나로 고정하는 회귀 테스트를 먼저 실패시킨 뒤 두 stale 복사본을 제거하고 재생성 방지 ignore를 추가했다.
+
+## 3. 최종 품질 게이트
+
+| 게이트 | 실제 결과 |
+|---|---|
+| `npm ci` | 성공, 539 packages 설치 |
+| `npm test -- --reporter=verbose` | 7 files, 24 tests 통과 |
+| `npm run lint` | 통과 |
+| `npm run typecheck` | 통과 |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.05 KiB |
+| `npm run test:e2e` | 기존 핵심 E2E 1/1 통과 |
+| `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
+| `npm audit --omit=dev` | production 취약점 0 |
+| 전체 `npm audit` | high 11, critical 0; 모두 개발 도구 체인. 직접 의존성 `eslint`, `vite-plugin-pwa` 포함 |
+
+전체 audit의 high 11건은 production 의존성에는 포함되지 않지만 무시하지 않았다. 해결 후보 중 ESLint는 major update가 필요하며, 강제 audit fix는 이번 bounded QA 범위에서 실행하지 않았다.
+
+## 4. 필수 브라우저 QA 결과
+
+| 시나리오 | 결과 |
+|---|---|
+| 390×844 | 수평 overflow 없음, 표시된 입력·버튼 44px 이상, 콘솔/page error 없음 |
+| 768×900 | 수평 overflow 없음, 44px 이상, 콘솔/page error 없음 |
+| 1440×1000 | max-width 모바일 레이아웃 정상, 수평 overflow 없음, 44px 이상, 콘솔/page error 없음 |
+| 파일 선택 취소 | 빈 파일 선택 결과 뒤 기존 이름과 폼 유지, 오류 alert 없음 |
+| 한국어 IME | `compositionstart → composing input → compositionend → final input` 뒤 동일 노드 연결·포커스·caret·최종값 유지, 저장 결과 1개 |
+| IndexedDB 새로고침 | 옷 3개와 착장 저장 후 새로고침 조회 성공 |
+| 핵심 흐름 | 옷 3개 → 착장 → 동일 조합 경고 → override 저장 → 다른 추천 성공 |
+| 빈 옷장·빈 기록·추천 없음 | 각 빈 상태와 다음 행동 정상 표시 |
+| 원피스만 | 원피스 단독 추천 성공 |
+| 삭제된 아이템 기록 | 옷 삭제 후 옷장에서는 제거되고 과거 착장 snapshot 이름은 유지 |
+| 전체 삭제 | 확인 문구 입력 후 삭제, 새로고침 뒤 빈 상태 유지 |
+| offline shell | production service worker 준비 후 네트워크 차단·새로고침에서 앱 셸 표시 |
+| 외부 요청 | 핵심 production 흐름에서 same-origin 밖 요청 0건 |
+
+390/768/1440 스크린샷을 직접 시각 검토했다. 텍스트 잘림·겹침·수평 잘림은 발견되지 않았다. 390 추천 화면의 하단 탭, 카드, CTA도 읽고 누를 수 있는 크기로 표시됐다.
+
+## 5. 보안·개인정보 점검
+
+- 소스와 설정에서 사용자 데이터용 `fetch`, XHR, WebSocket, beacon을 찾지 못했다.
+- 외부 분석·광고·오류 추적 SDK와 하드코딩 비밀값을 찾지 못했다.
+- production 핵심 흐름의 실제 network 기록에서 외부 origin 요청은 0건이었다.
+- 사용자 이름·메모·만남명은 React text rendering을 사용한다. `dangerouslySetInnerHTML` 또는 직접 `innerHTML` 사용을 찾지 못했다.
+- 이미지 입력은 allowlist, 25 MiB 상한, 디코딩 실패, 출력 인코딩 실패를 처리한다.
+- 이미지 표시는 data URL 기반이며 이미지용 object URL은 만들지 않는다. JSON 내보내기의 Blob object URL은 다운로드 시작 후 revoke한다.
+- 전체 삭제는 IndexedDB 5개 store와 앱 소유 Cache Storage prefix를 정리한다.
+- JSON 내보내기는 이미지 data URL과 착장 snapshot 사진을 제외하고 `containsImages:false`를 기록한다.
+
+## 6. 산출물
+
+- `QA_REPORT.md` — 본 보고서
+- `artifacts/qa/playwright-results.json` — Playwright 기계 판독 결과
+- `artifacts/qa/playwright-report/` — HTML QA 보고서
+- `artifacts/qa/390-core-flow.png`
+- `artifacts/qa/390-empty-closet.png`
+- `artifacts/qa/768-empty-closet.png`
+- `artifacts/qa/1440-empty-closet.png`
+- `artifacts/qa/390-offline-shell.png`
+
+## 7. 변경 파일
+
+- `src/image.ts`
+- `src/image.test.ts`
+- `src/App.tsx`
+- `src/App.failure.test.tsx`
+- `src/App.errors.test.tsx`
+- `src/privacy.test.ts`
+- `e2e/qa.spec.ts`
+- `playwright.qa.config.ts`
+- `playwright.config.ts`
+- `package.json`
+- `README.md`
+- `QA_REPORT.md`
+- `artifacts/qa/*`
+
+## 8. 남은 제한과 비차단 권고
+
+1. 자동 QA는 macOS Chromium이다. 실제 iPhone Safari/홈 화면 앱과 Android Chrome의 카메라 권한 UI, HEIC/HEIF, EXIF 1/3/6/8 방향은 실기기에서 아직 검증하지 않았다.
+2. 파일 선택 취소는 Playwright에서 빈 파일 목록으로 재현했다. 운영체제의 실제 카메라/앨범 picker 취소 UI 자체는 자동화하지 않았다.
+3. 현재 HTML에 명시적 CSP가 없다. 사용자 동적 텍스트는 React escaping으로 방어되고 외부 요청도 없지만, 공개 배포 전 정적 호스트 응답 헤더로 `default-src 'self'`, `img-src 'self' data: blob:`, `object-src 'none'`, `base-uri 'self'` 등 방어 심화를 권장한다.
+4. 개발 도구 audit high 11건은 production 취약점 0과 구분해 후속 의존성 업데이트에서 처리해야 한다.
+5. 실제 공개 URL 검증은 배포 금지 조건 때문에 수행하지 않았다.
+
+## 9. 최종 판정
+
+요구된 로컬 production artifact 범위에서는 **수정 후 통과**다. 필수 기능·브라우저 흐름·오프라인 셸·개인정보 경계·production build를 독립적으로 재현했다. 다만 실제 모바일 출시 판정에는 8절 1번의 실기기 카메라/HEIC/EXIF 검증이 추가로 필요하다.
