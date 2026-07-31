@@ -50,6 +50,8 @@ test('하단 내비게이션 순서와 옷 계절 복수 선택을 보존한다'
   await page.getByRole('button', { name: /옷 등록/ }).first().click();
   await page.getByLabel('옷 이름', { exact: true }).fill('복수 계절 상의');
   await page.getByLabel('앨범에서 선택').setInputFiles('e2e/fixtures/garment.png');
+  const seasonTargets = page.getByRole('group', { name: '계절 (복수 선택)' }).locator('label.check');
+  for (const target of await seasonTargets.all()) expect((await target.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await page.getByLabel('계절 봄').check();
   await expect(page.getByLabel('계절 사계절')).not.toBeChecked();
   await page.getByLabel('계절 여름').check();
@@ -71,6 +73,24 @@ test('하단 내비게이션 순서와 옷 계절 복수 선택을 보존한다'
   await expect(page.getByLabel('계절 여름')).toBeChecked();
   await expect(page.getByLabel('계절 사계절')).not.toBeChecked();
   await page.getByRole('button', { name: '닫기' }).click();
+});
+
+test('옷 등록 form을 같은 이벤트 턴에 두 번 제출해도 레코드는 하나만 생성된다', async ({ page }) => {
+  await openDb(page);
+  await page.getByRole('button', { name: /옷 등록/ }).first().click();
+  await page.getByLabel('옷 이름', { exact: true }).fill('동기 잠금 상의');
+  await page.getByLabel('앨범에서 선택').setInputFiles('e2e/fixtures/garment.png');
+  await expect(page.getByAltText('선택한 옷 미리보기')).toBeVisible();
+  await page.getByRole('dialog', { name: '옷 등록' }).locator('form').evaluate((form) => {
+    (form as HTMLFormElement).requestSubmit();
+    (form as HTMLFormElement).requestSubmit();
+  });
+  await expect(page.locator('.card').filter({ hasText: '동기 잠금 상의' })).toHaveCount(1);
+  const count = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const request=indexedDB.open('angyeopchyeo',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error); });
+    const value = await new Promise<number>((resolve,reject)=>{const request=db.transaction('garments').objectStore('garments').count();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}); db.close(); return value;
+  });
+  expect(count).toBe(1);
 });
 
 test('중복 초안 override는 DRAFT를 유지하고 정확한 경고와 이전 기록을 표시한다', async ({ page }) => {

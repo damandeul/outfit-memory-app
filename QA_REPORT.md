@@ -88,16 +88,21 @@
 - 추천 결과가 없으면 부족 핵심 카테고리 또는 과거 핵심 조합 제외 원인을 안내한다.
 - 옷은 `deletedAt` 소프트 삭제하고 새 선택·추천에서 제외하되 과거 snapshot과 export 레코드는 보존한다.
 
+### F-21~F-22. 최종 clean-room 저장 잠금·터치 대상 결함 — 수정 완료
+
+- 옷 등록 폼을 같은 JavaScript 이벤트 턴에서 `requestSubmit()` 두 번 호출하면 서로 다른 UUID의 옷이 2개 저장되던 문제를 재현했다. `GarmentForm`에 `useRef` 동기 save lock을 추가해 첫 `await` 전에 선점하고 실패·완료 시 해제한다. unit 테스트와 production mobile Chromium 테스트에서 DB 레코드가 정확히 1개임을 확인했다.
+- 계절 선택 연결 label이 390px에서 42px 높이로 44px 기준에 미달하던 문제를 재현했다. `.check`에 `min-height:44px`를 적용하고 5개 계절 label의 실제 bounding box가 모두 44px 이상인지 mobile E2E에서 검증한다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 8 files, 38 tests 통과 |
+| `npm test -- --reporter=verbose` | 8 files, 45 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 230.08 KiB |
-| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 6/6 통과 |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 235.74 KiB |
+| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 15/15 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
 | 전체 `npm audit` | high 11, critical 0; 모두 개발 도구 체인. 직접 의존성 `eslint`, `vite-plugin-pwa` 포함 |
@@ -115,6 +120,8 @@
 | 스마트폰 사진 입력 | 후면 카메라 촬영 힌트와 별도 앨범 선택 입력 제공 |
 | 옷 이름 제안 | 색상·카테고리 기반 자동 제안, 태그 변경 추적, 직접 수정 후 값 보존 |
 | 옷 사진 필수 | 무사진 제출 오류, DB 저장 0회; 정상 카메라/앨범 사진 저장 |
+| 저장 잠금 | 같은 이벤트 턴 form 이중 제출 후 IndexedDB 옷 레코드 정확히 1개 |
+| 계절 터치 대상 | 390px 옷 등록 폼의 5개 연결 label 실제 높이 모두 44px 이상 |
 | 한국어 IME | `compositionstart → composing input → compositionend → final input` 뒤 동일 노드 연결·포커스·caret·최종값 유지, 저장 결과 1개 |
 | IndexedDB 새로고침 | 옷 3개와 착장 저장 후 새로고침 조회 성공 |
 | 핵심 흐름 | 옷 3개 → 착장 → 동일 조합 경고 → override 저장 → 다른 추천 성공 |
