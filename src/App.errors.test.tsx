@@ -40,6 +40,7 @@ describe('recoverable persistence and image errors', () => {
     mocks.getOutfits.mockResolvedValue([]);
     mocks.saveGarment.mockResolvedValue('ok');
     mocks.saveOutfit.mockResolvedValue('ok');
+    mocks.compressPhoto.mockResolvedValue('data:image/webp;base64,processed');
   });
 
   it('초기 IndexedDB 조회 실패를 오류 UI와 재시도로 복구한다', async () => {
@@ -57,6 +58,8 @@ describe('recoverable persistence and image errors', () => {
     await screen.findByText('아직 등록한 옷이 없어');
     fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
     fireEvent.change(screen.getByLabelText('옷 이름'), { target: { value: '실패해도 유지' } });
+    fireEvent.change(screen.getByLabelText('앨범에서 선택'), { target: { files: [new File(['photo'], 'garment.jpg', { type: 'image/jpeg' })] } });
+    await screen.findByAltText('선택한 옷 미리보기');
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어');
     expect(screen.getByLabelText('옷 이름')).toHaveValue('실패해도 유지');

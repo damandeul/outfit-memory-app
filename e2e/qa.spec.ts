@@ -17,6 +17,8 @@ async function addGarment(page: Page, name: string, category: string) {
   await page.getByRole('button', { name: /옷 등록/ }).first().click();
   await page.getByLabel('옷 이름', { exact: true }).fill(name);
   await page.getByLabel('카테고리').selectOption(category);
+  await page.getByLabel('앨범에서 선택').setInputFiles('e2e/fixtures/garment.png');
+  await expect(page.getByAltText('선택한 옷 미리보기')).toBeVisible();
   await page.getByRole('button', { name: '저장' }).click();
   await expect(page.getByText(name, { exact: true })).toBeVisible();
 }
@@ -67,6 +69,8 @@ test('카메라 파일 선택 취소와 한국어 IME가 입력 노드·포커�
   await expect(name).toHaveValue('검정 크롭티');
   expect(await name.evaluate(input => (input as HTMLInputElement).selectionStart)).toBe('검정 크롭티'.length);
 
+  await page.getByLabel('앨범에서 선택').setInputFiles('e2e/fixtures/garment.png');
+  await expect(page.getByAltText('선택한 옷 미리보기')).toBeVisible();
   await page.getByRole('button', { name: '저장' }).click();
   await expect(page.getByText('검정 크롭티', { exact: true })).toHaveCount(1);
   expect(runtimeErrors).toEqual([]);

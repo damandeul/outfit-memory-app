@@ -1,6 +1,6 @@
 # 안겹쳐 독립 QA 보고서
 
-- 검수 시각: 2026-07-30 23:58 KST
+- 검수 시각: 2026-07-31 KST
 - 대상: `/Users/damandeul/다만들/ai-company/outfit-memory-app`
 - 판정: **수정 후 통과 — 로컬 production artifact 기준**
 - 금지사항 준수: 배포, 커밋, 푸시, 유료 API 호출을 실행하지 않음
@@ -73,16 +73,28 @@
 
 비동기 사진 처리가 시작될 때의 카테고리·색상이 closure에 고정되어, 처리 중 태그를 바꾸면 완료 후 오래된 `검정 상의`가 제안됐다. 카테고리·색상 ref를 이벤트에서 동기 갱신하고 사진 완료 시 최신 ref를 읽도록 수정했다. 처리 중 `아우터`·`파랑`으로 바꾼 뒤 `파랑 아우터`가 제안되는 회귀 테스트를 RED→GREEN으로 확인했다.
 
+### F-14~F-20. 제품 명세 P0 독립 적대 인수 결함 — 수정 완료
+
+독립 감수에서 기존 표준 suite가 놓친 7개 제품 계약을 재현했다. 적대 테스트를 `src/product-contract.test.ts`와 `e2e/product-contract.spec.ts`로 영구 편입한 뒤 다음을 RED→GREEN 처리했다.
+
+- 계절 일치 후보가 없어도 다른 계절 후보를 fallback으로 유지한다.
+- 추천은 최근 핵심 등장 총횟수, 등장 핵심 수, 계절 불일치, 핵심 색상, last worn, ID 순으로 사전식 정렬한다.
+- 신발 등 보조 아이템은 핵심 색상 조화 판정을 바꾸지 않는다.
+- 신규 옷은 사진이 필수이며 무사진 제출은 IndexedDB write를 시작하지 않는다.
+- 추천을 3개씩 탐색하고 소진 후 처음부터 볼 수 있다.
+- 초안을 같은 ID로 수정하고 실제 착용으로 확정하며 새로고침 후 유지한다.
+- 옷은 `deletedAt` 소프트 삭제하고 새 선택·추천에서 제외하되 과거 snapshot과 export 레코드는 보존한다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 7 files, 32 tests 통과 |
+| `npm test -- --reporter=verbose` | 8 files, 36 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 227.04 KiB |
-| `npm run test:e2e` | 기존 핵심 E2E 1/1 통과 |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 229.10 KiB |
+| `npm run test:e2e` | 핵심 + 제품 계약 모바일 E2E 4/4 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
 | 전체 `npm audit` | high 11, critical 0; 모두 개발 도구 체인. 직접 의존성 `eslint`, `vite-plugin-pwa` 포함 |
@@ -99,12 +111,15 @@
 | 파일 선택 취소 | 빈 파일 선택 결과 뒤 기존 이름과 폼 유지, 오류 alert 없음 |
 | 스마트폰 사진 입력 | 후면 카메라 촬영 힌트와 별도 앨범 선택 입력 제공 |
 | 옷 이름 제안 | 색상·카테고리 기반 자동 제안, 태그 변경 추적, 직접 수정 후 값 보존 |
+| 옷 사진 필수 | 무사진 제출 오류, DB 저장 0회; 정상 카메라/앨범 사진 저장 |
 | 한국어 IME | `compositionstart → composing input → compositionend → final input` 뒤 동일 노드 연결·포커스·caret·최종값 유지, 저장 결과 1개 |
 | IndexedDB 새로고침 | 옷 3개와 착장 저장 후 새로고침 조회 성공 |
 | 핵심 흐름 | 옷 3개 → 착장 → 동일 조합 경고 → override 저장 → 다른 추천 성공 |
 | 빈 옷장·빈 기록·추천 없음 | 각 빈 상태와 다음 행동 정상 표시 |
 | 원피스만 | 원피스 단독 추천 성공 |
-| 삭제된 아이템 기록 | 옷 삭제 후 옷장에서는 제거되고 과거 착장 snapshot 이름은 유지 |
+| 후보 탐색 | 3개 단위 다음 후보, 마지막 페이지, 처음부터 보기 |
+| 초안·착장 수정 | 초안 수정, DRAFT→CONFIRMED 확정, 새로고침 지속 |
+| 삭제된 아이템 기록 | `deletedAt` 레코드는 보존되고 옷장·새 선택·추천에서는 제외되며 과거 snapshot 이름은 유지 |
 | 전체 삭제 | 확인 문구 입력 후 삭제, 새로고침 뒤 빈 상태 유지 |
 | offline shell | production service worker 준비 후 네트워크 차단·새로고침에서 앱 셸 표시 |
 | 외부 요청 | 핵심 production 흐름에서 same-origin 밖 요청 0건 |

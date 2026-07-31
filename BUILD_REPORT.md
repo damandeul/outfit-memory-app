@@ -6,7 +6,7 @@
 
 ## 구현 결과
 
-React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 옷장 CRUD/보관, 스마트폰 후면 카메라 촬영과 앨범 선택, 색상·카테고리 기반 이름 제안, 착장 기록과 snapshot, 동일·핵심 동일 조합 경고, 최근 4회 판정, 결정적 추천과 이유, 초안, 기록 목록, JSON 메타데이터 내보내기, 전체 삭제, 한국어 IME 방어, 사진 취소·압축·방향 반영, 390/768px 레이아웃, service worker 앱 셸을 포함한다.
+React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 사진 필수 옷장 CRUD/보관/소프트 삭제, 스마트폰 후면 카메라 촬영과 앨범 선택, 색상·카테고리 기반 이름 제안, 착장 기록과 snapshot, 동일·핵심 동일 조합 경고, 최근 4회 판정, 계절 fallback과 사전식 결정적 추천, 3개 단위 후보 탐색, 초안 수정·확정, 착장 수정, JSON 메타데이터 내보내기, 전체 삭제, 한국어 IME 방어, 사진 취소·압축·방향 반영, 390/768px 레이아웃, service worker 앱 셸을 포함한다.
 
 ## TDD RED → GREEN 실행 근거
 
@@ -32,15 +32,15 @@ React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 옷장
 ## 최종 검증
 
 - `npm ci`: 성공, 539 packages 설치
-- `npm test`: 7 files, 32 tests PASS
-- `npm run test:e2e`: mobile Chromium 1/1 PASS
+- `npm test`: 8 files, 36 tests PASS
+- `npm run test:e2e`: mobile Chromium 4/4 PASS
 - `npm run test:qa`: fresh production Chromium 7/7 PASS
 - `npm run lint`: PASS
 - `npm run typecheck`: PASS
 - `npm run build`: PASS
   - 36 modules transformed
   - `dist/index.html`, JS/CSS, `manifest.webmanifest`, `sw.js`, Workbox 생성
-  - precache 7 entries, 227.04 KiB
+  - precache 7 entries, 229.10 KiB
 - `npm audit --omit=dev`: production dependencies 취약점 0
 - 반응형: E2E에서 390px와 768px `scrollWidth <= clientWidth` 확인
 - 지속성: E2E에서 옷 3개와 착장 저장 후 새로고침 조회 확인
