@@ -29,27 +29,32 @@ export function duplicateCheck(
   const currentCore = core(ids, cats);
   const live = outfits
     .filter((outfit) => !outfit.deletedAt && outfit.status === 'CONFIRMED')
-    .sort((a, b) => b.localDate.localeCompare(a.localDate));
+    .sort(
+      (a, b) =>
+        b.localDate.localeCompare(a.localDate) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.id.localeCompare(a.id),
+    );
   const sameContext = live.filter(
     (outfit) =>
       outfit.contextKey === contextKey || normalize(outfit.contextName) === contextKey,
   );
-  const exact = sameContext.find((outfit) => outfit.combinationKey === key);
-  if (exact) return { kind: 'exact' as const, match: exact };
+  const exact = sameContext.filter((outfit) => outfit.combinationKey === key);
+  if (exact.length) return { kind: 'exact' as const, match: exact[0], matches: exact };
 
-  const coreMatch = currentCore
-    ? sameContext.find((outfit) => {
+  const coreMatches = currentCore
+    ? sameContext.filter((outfit) => {
         const snapshotCategories = Object.fromEntries(
           outfit.items.map((item) => [item.garmentId, item.category]),
         );
-        return core(outfit.garmentIds, { ...snapshotCategories, ...cats }) === currentCore;
+        return core(outfit.garmentIds, { ...cats, ...snapshotCategories }) === currentCore;
       })
-    : undefined;
-  if (coreMatch) return { kind: 'core' as const, match: coreMatch };
+    : [];
+  if (coreMatches.length) return { kind: 'core' as const, match: coreMatches[0], matches: coreMatches };
 
-  const other = live.find((outfit) => outfit.combinationKey === key);
-  return other
-    ? { kind: 'other' as const, match: other }
+  const other = live.filter((outfit) => outfit.combinationKey === key);
+  return other.length
+    ? { kind: 'other' as const, match: other[0], matches: other }
     : { kind: 'none' as const };
 }
 

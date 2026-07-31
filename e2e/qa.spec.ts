@@ -96,7 +96,7 @@ test('옷 3개 → 착장 → 동일 조합 경고 → 다른 추천 → 새로�
   await page.getByLabel('청바지').check();
   await page.getByLabel('검정 크롭티').check();
   await page.getByRole('button', { name: '중복 확인하고 저장' }).click();
-  await expect(page.getByText('이 조합, 전에 입었어')).toBeVisible();
+  await expect(page.getByText('이 수업에서 이전과 완전히 같은 조합이에요.')).toBeVisible();
   await page.getByRole('button', { name: '그대로 저장' }).click();
 
   await page.getByRole('button', { name: '다음 만남' }).click();
@@ -139,7 +139,7 @@ test('빈 옷장·원피스 단독·삭제된 아이템 기록·전체 삭제를
   await page.locator('.card').filter({ hasText: '삭제할 재킷' }).getByRole('button', { name: '삭제' }).click();
   await expect(page.getByText('삭제할 재킷')).toHaveCount(0);
   await page.getByRole('button', { name: '기록' }).click();
-  await expect(page.getByText('삭제할 재킷')).toBeVisible();
+  await expect(page.getByText('검정 원피스 · 삭제할 재킷', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: '설정' }).click();
   await page.getByLabel('삭제하려면 “안겹쳐” 입력').fill('안겹쳐');

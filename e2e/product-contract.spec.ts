@@ -12,7 +12,7 @@ async function addWithPhoto(page: Page, name: string, category: string, options:
   await page.getByLabel('옷 이름', { exact: true }).fill(name);
   await page.getByLabel('카테고리').selectOption(category);
   if (options.color) await page.getByLabel('주색상').selectOption(options.color);
-  if (options.season) await page.getByLabel('계절').selectOption(options.season);
+  if (options.season) await page.getByLabel(`계절 ${({ SPRING: '봄', SUMMER: '여름', AUTUMN: '가을', WINTER: '겨울', ALL: '사계절' } as Record<string,string>)[options.season]}`).check();
   await page.getByLabel('앨범에서 선택').setInputFiles('e2e/fixtures/garment.png');
   await expect(page.getByAltText('선택한 옷 미리보기')).toBeVisible();
   await page.getByRole('button', { name: '저장' }).click();
@@ -66,6 +66,8 @@ test('추천할 핵심 카테고리가 부족하면 원인과 다음 행동을 �
   await page.getByRole('button', { name: '코디 추천받기' }).click();
   await expect(page.getByRole('heading', { name: '추천할 후보가 없어' })).toBeVisible();
   await expect(page.getByText(/하의 또는 원피스/)).toBeVisible();
+  await expect(page.getByRole('button', { name: '옷 등록·재활성화' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '직접 착장 만들기' })).toBeVisible();
 });
 
 test('추천 초안은 기록에서 실제 착용 확정 및 수정할 수 있다', async ({ page }) => {
