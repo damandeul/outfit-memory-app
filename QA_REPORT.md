@@ -61,15 +61,19 @@
 
 기본 Playwright 설정의 `reuseExistingServer`를 `false`로 고정했다. 포트에 무관한 서버가 있으면 조용히 재사용하지 않고 실패하므로, 핵심 E2E가 현재 소스에서 시작한 개발 서버만 검사한다. 설정 회귀 테스트를 추가했다.
 
+### F-11. 스마트폰 촬영 진입과 안전한 이름 제안 — 구현 완료
+
+옷 등록에 후면 카메라 힌트 `capture="environment"`가 있는 촬영 입력과 capture를 강제하지 않는 앨범 입력을 함께 제공한다. 두 경로는 같은 MIME·크기·디코딩·EXIF 제거·압축 파이프라인을 사용한다. 사진 처리 후 이름이 비어 있으면 현재 색상과 카테고리로 이름을 제안하며, 자동 제안 중에는 태그 변경을 따라가고 사용자가 이름을 수정한 뒤에는 덮어쓰지 않는다. 카메라/앨범 DOM 계약, 자동 제안, 태그 추적, 수동 수정 보존 테스트를 RED→GREEN으로 추가했다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 7 files, 27 tests 통과 |
+| `npm test -- --reporter=verbose` | 7 files, 30 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.25 KiB |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.90 KiB |
 | `npm run test:e2e` | 기존 핵심 E2E 1/1 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
@@ -85,6 +89,8 @@
 | 768×900 | 수평 overflow 없음, 44px 이상, 콘솔/page error 없음 |
 | 1440×1000 | max-width 모바일 레이아웃 정상, 수평 overflow 없음, 44px 이상, 콘솔/page error 없음 |
 | 파일 선택 취소 | 빈 파일 선택 결과 뒤 기존 이름과 폼 유지, 오류 alert 없음 |
+| 스마트폰 사진 입력 | 후면 카메라 촬영 힌트와 별도 앨범 선택 입력 제공 |
+| 옷 이름 제안 | 색상·카테고리 기반 자동 제안, 태그 변경 추적, 직접 수정 후 값 보존 |
 | 한국어 IME | `compositionstart → composing input → compositionend → final input` 뒤 동일 노드 연결·포커스·caret·최종값 유지, 저장 결과 1개 |
 | IndexedDB 새로고침 | 옷 3개와 착장 저장 후 새로고침 조회 성공 |
 | 핵심 흐름 | 옷 3개 → 착장 → 동일 조합 경고 → override 저장 → 다른 추천 성공 |
@@ -114,6 +120,7 @@
 - `artifacts/qa/playwright-results.json` — Playwright 기계 판독 결과
 - `artifacts/qa/playwright-report/` — HTML QA 보고서
 - `artifacts/qa/390-core-flow.png`
+- `artifacts/qa/390-garment-camera-form.png`
 - `artifacts/qa/390-empty-closet.png`
 - `artifacts/qa/768-empty-closet.png`
 - `artifacts/qa/1440-empty-closet.png`
@@ -144,6 +151,7 @@
 3. 현재 HTML에 명시적 CSP가 없다. 사용자 동적 텍스트는 React escaping으로 방어되고 외부 요청도 없지만, 공개 배포 전 정적 호스트 응답 헤더로 `default-src 'self'`, `img-src 'self' data: blob:`, `object-src 'none'`, `base-uri 'self'` 등 방어 심화를 권장한다.
 4. 개발 도구 audit high 11건은 production 취약점 0과 구분해 후속 의존성 업데이트에서 처리해야 한다.
 5. 실제 공개 URL 검증은 배포 금지 조건 때문에 수행하지 않았다.
+6. 이름 제안은 사진 픽셀을 인식하는 AI가 아니라 사용자가 선택한 색상·카테고리 기반 로컬 규칙이다. 사진 내용 기반 분류는 이번 범위에 포함하지 않았다.
 
 ## 9. 최종 판정
 

@@ -16,6 +16,7 @@ npm run dev
 ```bash
 npm test
 npm run test:e2e
+npm run test:qa
 npm run lint
 npm run typecheck
 npm run build
@@ -24,7 +25,9 @@ npm audit --omit=dev
 
 ## 핵심 기능
 
+- 스마트폰 후면 카메라 촬영과 별도 앨범 선택
 - 옷 사진·이름·카테고리·색상·계절·메모 등록, 수정, 보관, 삭제
+- 사진 처리 후 색상·카테고리 기반 이름 제안, 직접 수정값 보존
 - 날짜·만남·선택 아이템·선택 사진 기반 착장 기록
 - 동일 조합/핵심 동일 조합 경고와 명시적 저장 override
 - 같은 만남의 대상일 이전 최근 4회 사용 표시

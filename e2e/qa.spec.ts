@@ -37,7 +37,7 @@ test('카메라 파일 선택 취소와 한국어 IME가 입력 노드·포커�
 
   const name = page.getByLabel('옷 이름', { exact: true });
   await name.fill('취소 전 입력');
-  await page.getByLabel('옷 사진').setInputFiles([]);
+  await page.getByLabel('앨범에서 선택').setInputFiles([]);
   await expect(name).toHaveValue('취소 전 입력');
   await expect(page.getByRole('alert')).toHaveCount(0);
 

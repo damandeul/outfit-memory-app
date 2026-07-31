@@ -77,7 +77,7 @@ describe('recoverable storage and photo failures', () => {
     fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
     fireEvent.change(screen.getByLabelText('옷 이름'), { target: { value: '검정 크롭티' } });
     const file = new File(['photo'], 'outfit.jpg', { type: 'image/jpeg' });
-    fireEvent.change(screen.getByLabelText('옷 사진'), { target: { files: [file] } });
+    fireEvent.change(screen.getByLabelText('카메라로 촬영'), { target: { files: [file] } });
     const processing = await screen.findByRole('button', { name: '사진 준비 중…' });
     expect(processing).toBeDisabled();
     fireEvent.submit(processing.closest('form')!);
@@ -89,6 +89,34 @@ describe('recoverable storage and photo failures', () => {
     await waitFor(() => expect(db.saveGarment).toHaveBeenCalledWith(expect.objectContaining({
       photoDataUrl: 'data:image/webp;base64,processed',
     })));
+  });
+
+  it('suggests a garment name after a camera photo when the name is empty', async () => {
+    image.compressPhoto.mockResolvedValueOnce('data:image/webp;base64,processed');
+    render(<App />);
+    await screen.findByText('아직 등록한 옷이 없어');
+    fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
+    fireEvent.change(screen.getByLabelText('카테고리'), { target: { value: 'OUTER' } });
+    fireEvent.change(screen.getByLabelText('주색상'), { target: { value: 'BLUE' } });
+    const file = new File(['photo'], 'jacket.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('카메라로 촬영'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByLabelText('옷 이름')).toHaveValue('파랑 아우터'));
+  });
+
+  it('updates an automatic name with tags until the user edits it', async () => {
+    image.compressPhoto.mockResolvedValueOnce('data:image/webp;base64,processed');
+    render(<App />);
+    await screen.findByText('아직 등록한 옷이 없어');
+    fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
+    const file = new File(['photo'], 'jacket.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('카메라로 촬영'), { target: { files: [file] } });
+    await waitFor(() => expect(screen.getByLabelText('옷 이름')).toHaveValue('검정 상의'));
+    fireEvent.change(screen.getByLabelText('카테고리'), { target: { value: 'OUTER' } });
+    fireEvent.change(screen.getByLabelText('주색상'), { target: { value: 'BLUE' } });
+    expect(screen.getByLabelText('옷 이름')).toHaveValue('파랑 아우터');
+    fireEvent.change(screen.getByLabelText('옷 이름'), { target: { value: '내 청재킷' } });
+    fireEvent.change(screen.getByLabelText('주색상'), { target: { value: 'RED' } });
+    expect(screen.getByLabelText('옷 이름')).toHaveValue('내 청재킷');
   });
 
   it('shows outfit photo decode failure while preserving date, context and selections', async () => {
