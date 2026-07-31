@@ -42,6 +42,9 @@ async function seedDuplicateHistory(page: Page) {
 
 test('하단 내비게이션 순서와 옷 계절 복수 선택을 보존한다', async ({ page }) => {
   await openDb(page);
+  const privacyNotice = page.getByText(/이 기기·이 브라우저에만 로컬 저장/);
+  await expect(privacyNotice).toContainText('외부로 전송하지 않아');
+  await expect(privacyNotice).toContainText('브라우저 데이터를 지우면 사라질 수 있어');
   const nav = page.getByRole('navigation', { name: '주 메뉴' }).getByRole('button');
   await expect(nav).toHaveText(['다음 만남', '기록', '옷장']);
   await page.getByRole('button', { name: /옷 등록/ }).first().click();
@@ -165,4 +168,50 @@ test('후보 없음 회복 CTA는 실제 옷장과 직접 착장 만들기로 �
   await page.getByRole('button', { name: '코디 추천받기' }).click();
   await page.getByRole('button', { name: '직접 착장 만들기' }).click();
   await expect(page.getByRole('dialog', { name: '착장 기록' })).toBeVisible();
+});
+
+test('착장 편집은 자기 최근 기록을 제외하고 기존 당시 snapshot을 보존한다', async ({ page }) => {
+  await openDb(page);
+  await page.evaluate(async ({ currentPhoto, oldPhoto }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('angyeopchyeo', 1); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const tx = db.transaction(['garments', 'outfits'], 'readwrite');
+    tx.objectStore('garments').put({ id:'item-a', name:'현재 이름 V2', category:'BOTTOM', color:'BLACK', seasons:['ALL'], note:'', status:'ACTIVE', mainMediaId:null, photoDataUrl:currentPhoto, createdAt:'2026-07-01T00:00:00.000Z', updatedAt:'2026-07-02T00:00:00.000Z' });
+    tx.objectStore('outfits').put({ id:'past-v1', localDate:'2026-07-01', contextName:'Snapshot 수업', contextKey:'Snapshot 수업', note:'기존 메모', fullMediaId:null, items:[{ garmentId:'item-a', name:'당시 이름 V1', category:'TOP', color:'WHITE', photoDataUrl:oldPhoto }], garmentIds:['item-a'], combinationKey:'item-a', status:'CONFIRMED', duplicateKind:'none', ruleVersion:1, createdAt:'2026-07-01T10:00:00.000Z', updatedAt:'2026-07-01T10:00:00.000Z' });
+    await new Promise<void>((resolve, reject) => { tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error); }); db.close();
+  }, { currentPhoto: pixel, oldPhoto: pixel });
+  await page.reload();
+  await page.getByRole('button', { name: '기록' }).click();
+  await page.getByRole('button', { name: '수정' }).click();
+  await page.getByLabel('언제 입었어?').fill('2026-07-08');
+  await expect(page.getByText('최근 0번 중 0번 · 마지막 기록 없음')).toBeVisible();
+  await page.getByLabel('언제 입었어?').fill('2026-07-01');
+  await page.getByLabel('메모').fill('메모만 수정');
+  await page.getByRole('button', { name: '수정 저장' }).click();
+  await expect(page.getByRole('dialog', { name: '착장 수정' })).toHaveCount(0);
+  const snapshot = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const request=indexedDB.open('angyeopchyeo',1); request.onsuccess=()=>resolve(request.result); request.onerror=()=>reject(request.error); });
+    const value = await new Promise<{ items:Array<{name:string;category:string;color:string;photoDataUrl:string}> }>((resolve,reject)=>{const request=db.transaction('outfits').objectStore('outfits').get('past-v1');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}); db.close(); return value.items[0];
+  });
+  expect(snapshot).toMatchObject({ name:'당시 이름 V1', category:'TOP', color:'WHITE', photoDataUrl:pixel });
+  await page.getByRole('button', { name: '옷장' }).click();
+  page.once('dialog', dialog => void dialog.accept());
+  await page.locator('.card').filter({ hasText:'현재 이름 V2' }).getByRole('button', { name:'삭제' }).click();
+  await page.getByRole('button', { name: '기록' }).click();
+  await page.getByText('상세 보기').click();
+  await expect(page.getByText('당시 이름 V1 · 상의 · 흰색')).toBeVisible();
+  await expect(page.getByRole('img', { name:'당시 이름 V1 당시 사진' })).toBeVisible();
+});
+
+test('다른 만남의 핵심 동일 추천은 실제 날짜와 만남을 약하게 안내한다', async ({ page }) => {
+  await openDb(page);
+  await page.evaluate(async ({ photo }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const request=indexedDB.open('angyeopchyeo',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error); });
+    const now='2026-07-01T00:00:00.000Z'; const tx=db.transaction(['garments','outfits'],'readwrite');
+    for(const value of [{id:'top',name:'상의',category:'TOP'},{id:'bottom',name:'하의',category:'BOTTOM'},{id:'new-shoe',name:'새 신발',category:'SHOES'}])tx.objectStore('garments').put({...value,color:'BLACK',seasons:['ALL'],note:'',status:'ACTIVE',mainMediaId:null,photoDataUrl:photo,createdAt:now,updatedAt:now});
+    tx.objectStore('outfits').put({id:'other-core',localDate:'2026-07-02',contextName:'다른 수업',contextKey:'다른 수업',note:'',fullMediaId:null,items:[{garmentId:'top',name:'상의',category:'TOP',color:'BLACK'},{garmentId:'bottom',name:'하의',category:'BOTTOM',color:'BLACK'},{garmentId:'old-shoe',name:'구 신발',category:'SHOES',color:'BLACK'}],garmentIds:['bottom','old-shoe','top'],combinationKey:'bottom|old-shoe|top',status:'CONFIRMED',duplicateKind:'none',ruleVersion:1,createdAt:'2026-07-02T10:00:00.000Z',updatedAt:'2026-07-02T10:00:00.000Z'});
+    await new Promise<void>((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close();
+  }, { photo:pixel });
+  await page.reload(); await page.getByRole('button',{name:'다음 만남'}).click();
+  await page.getByLabel('언제 만날 예정이야?').fill('2026-07-10'); await page.getByLabel('어떤 만남이야?').fill('새 수업'); await page.getByRole('button',{name:'코디 추천받기'}).click();
+  await expect(page.getByText('다른 일정에서 2026-07-02 · 다른 수업에 같은 핵심 조합을 입었어요').first()).toBeVisible();
 });

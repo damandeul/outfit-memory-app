@@ -15,8 +15,17 @@ export const canonicalIds = (ids: string[]) =>
 export const normalize = (s: string) =>
   s.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ko-KR');
 
+export const meetingKey = (s: string) => s.trim();
+
 const core = (ids: string[], cats: Record<string, Category>) =>
   canonicalIds(ids.filter((id) => CORE_CATEGORIES.has(cats[id]))).join('|');
+
+const outfitCore = (outfit: Outfit, cats: Record<string, Category>) => {
+  const snapshotCategories = Object.fromEntries(
+    outfit.items.map((item) => [item.garmentId, item.category]),
+  );
+  return core(outfit.garmentIds, { ...cats, ...snapshotCategories });
+};
 
 export function duplicateCheck(
   ids: string[],
@@ -25,7 +34,7 @@ export function duplicateCheck(
   cats: Record<string, Category>,
 ) {
   const key = canonicalIds(ids).join('|');
-  const contextKey = normalize(context);
+  const contextKey = meetingKey(context);
   const currentCore = core(ids, cats);
   const live = outfits
     .filter((outfit) => !outfit.deletedAt && outfit.status === 'CONFIRMED')
@@ -37,18 +46,13 @@ export function duplicateCheck(
     );
   const sameContext = live.filter(
     (outfit) =>
-      outfit.contextKey === contextKey || normalize(outfit.contextName) === contextKey,
+      meetingKey(outfit.contextName) === contextKey,
   );
   const exact = sameContext.filter((outfit) => outfit.combinationKey === key);
   if (exact.length) return { kind: 'exact' as const, match: exact[0], matches: exact };
 
   const coreMatches = currentCore
-    ? sameContext.filter((outfit) => {
-        const snapshotCategories = Object.fromEntries(
-          outfit.items.map((item) => [item.garmentId, item.category]),
-        );
-        return core(outfit.garmentIds, { ...cats, ...snapshotCategories }) === currentCore;
-      })
+    ? sameContext.filter((outfit) => outfitCore(outfit, cats) === currentCore)
     : [];
   if (coreMatches.length) return { kind: 'core' as const, match: coreMatches[0], matches: coreMatches };
 
@@ -58,13 +62,47 @@ export function duplicateCheck(
     : { kind: 'none' as const };
 }
 
+function otherContextMatch(
+  ids: string[],
+  context: string,
+  outfits: Outfit[],
+  cats: Record<string, Category>,
+) {
+  const key = canonicalIds(ids).join('|');
+  const currentCore = core(ids, cats);
+  const contextKey = meetingKey(context);
+  const other = outfits
+    .filter(
+      (outfit) =>
+        !outfit.deletedAt &&
+        outfit.status === 'CONFIRMED' &&
+        meetingKey(outfit.contextName) !== contextKey,
+    )
+    .sort(
+      (a, b) =>
+        b.localDate.localeCompare(a.localDate) ||
+        b.createdAt.localeCompare(a.createdAt) ||
+        b.id.localeCompare(a.id),
+    );
+  const match = other.find(
+    (outfit) =>
+      outfit.combinationKey === key ||
+      Boolean(currentCore && outfitCore(outfit, cats) === currentCore),
+  );
+  if (!match) return undefined;
+  return {
+    outfit: match,
+    kind: match.combinationKey === key ? ('exact' as const) : ('core' as const),
+  };
+}
+
 export function recentFour(
   outfits: Outfit[],
   context: string,
   targetDate = '9999-12-31',
   editingId?: string,
 ) {
-  const key = normalize(context);
+  const key = meetingKey(context);
   return outfits
     .filter(
       (outfit) =>
@@ -72,7 +110,7 @@ export function recentFour(
         !outfit.deletedAt &&
         outfit.status === 'CONFIRMED' &&
         outfit.localDate < targetDate &&
-        (!key || outfit.contextKey === key || normalize(outfit.contextName) === key),
+        (!key || meetingKey(outfit.contextName) === key),
     )
     .sort(
       (a, b) =>
@@ -188,7 +226,7 @@ export function recommend(
         coreColors.length < 2 ||
         coreColors.some((color) => NEUTRAL_COLORS.has(color)) ||
         new Set(coreColors).size === 1;
-      const duplicate = duplicateCheck(ids, input.contextName, past, categories);
+      const otherMatch = otherContextMatch(ids, input.contextName, past, categories);
       const reasonCodes = [
         recentAppearances === 0 ? 'NOT_USED_IN_RECENT_4' : 'OLDER_IN_RECENT_4',
         ...(candidate.some((garment) => lastWorn[garment.id] === null)
@@ -196,7 +234,7 @@ export function recommend(
           : []),
         ...(seasonMismatches ? ['SEASON_MISMATCH'] : []),
         ...(harmony ? ['COLOR_STRONG'] : []),
-        ...(duplicate.kind === 'other' ? ['OTHER_CONTEXT_DUPLICATE'] : []),
+        ...(otherMatch ? ['OTHER_CONTEXT_DUPLICATE'] : []),
       ];
       return {
         garmentIds: ids,
@@ -209,6 +247,13 @@ export function recommend(
           (harmony ? 0 : 5),
         reasonCodes,
         lastWorn: Object.fromEntries(ids.map((id) => [id, lastWorn[id]])),
+        otherContextMatch: otherMatch
+          ? {
+              localDate: otherMatch.outfit.localDate,
+              contextName: otherMatch.outfit.contextName,
+              kind: otherMatch.kind,
+            }
+          : undefined,
         rank: {
           recentAppearances,
           recentCoreItems,
@@ -246,5 +291,6 @@ export function recommend(
     score: candidate.score,
     reasonCodes: candidate.reasonCodes,
     lastWorn: candidate.lastWorn,
+    otherContextMatch: candidate.otherContextMatch,
   }));
 }
