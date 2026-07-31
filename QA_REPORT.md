@@ -65,15 +65,19 @@
 
 옷 등록에 후면 카메라 힌트 `capture="environment"`가 있는 촬영 입력과 capture를 강제하지 않는 앨범 입력을 함께 제공한다. 두 경로는 같은 MIME·크기·디코딩·EXIF 제거·압축 파이프라인을 사용한다. 사진 처리 후 이름이 비어 있으면 현재 색상과 카테고리로 이름을 제안하며, 자동 제안 중에는 태그 변경을 따라가고 사용자가 이름을 수정한 뒤에는 덮어쓰지 않는다. 카메라/앨범 DOM 계약, 자동 제안, 태그 추적, 수동 수정 보존 테스트를 RED→GREEN으로 추가했다.
 
+### F-12. 중복 경고 상태에서 착장 사진 처리 중 override 가능 — 수정 완료
+
+중복 경고가 열린 뒤 착장 사진 처리를 시작하면 `그대로 저장`이 활성 상태로 남아 사진 없는 착장을 확정할 수 있었다. 지연된 사진 Promise로 실패를 재현한 뒤 착장 사진용 동기 lock, `persist()` 방어 조건, 경고 override 비활성화를 함께 적용했다. 처리 중 저장 호출 0회와 처리 완료 후 가공된 `fullPhotoDataUrl` 저장을 회귀 테스트로 확인했다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 7 files, 30 tests 통과 |
+| `npm test -- --reporter=verbose` | 7 files, 31 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.90 KiB |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.98 KiB |
 | `npm run test:e2e` | 기존 핵심 E2E 1/1 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |

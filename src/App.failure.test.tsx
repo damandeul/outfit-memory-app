@@ -135,6 +135,34 @@ describe('recoverable storage and photo failures', () => {
     expect(screen.getByLabelText('검정 크롭티')).toBeChecked();
   });
 
+  it('blocks duplicate override until the outfit photo is processed', async () => {
+    db.getGarments.mockResolvedValue([top, bottom]);
+    db.getOutfits.mockResolvedValue([prior]);
+    let resolvePhoto!: (value: string) => void;
+    image.compressPhoto.mockImplementation(() => new Promise<string>(resolve => { resolvePhoto = resolve; }));
+    render(<App />);
+    await screen.findByText('검정 크롭티');
+    fireEvent.click(screen.getByRole('button', { name: '기록' }));
+    fireEvent.click(screen.getByRole('button', { name: '착장 기록' }));
+    fireEvent.change(screen.getByLabelText('만남이나 수업 이름'), { target: { value: '목요일 방송댄스' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /검정 크롭티/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /청바지/ }));
+    fireEvent.click(screen.getByRole('button', { name: '중복 확인하고 저장' }));
+    const confirm = await screen.findByRole('button', { name: '그대로 저장' });
+    const file = new File(['photo'], 'outfit.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('전체 착장 사진 (선택)'), { target: { files: [file] } });
+    expect(await screen.findByRole('button', { name: '사진 준비 중…' })).toBeDisabled();
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(db.saveOutfit).not.toHaveBeenCalled();
+    resolvePhoto('data:image/webp;base64,processed-outfit');
+    await waitFor(() => expect(confirm).toBeEnabled());
+    fireEvent.click(confirm);
+    await waitFor(() => expect(db.saveOutfit).toHaveBeenCalledWith(expect.objectContaining({
+      fullPhotoDataUrl: 'data:image/webp;base64,processed-outfit',
+    })));
+  });
+
   it('saves a warned duplicate only once when the confirmation is clicked repeatedly', async () => {
     db.getGarments.mockResolvedValue([top, bottom]);
     db.getOutfits.mockResolvedValue([prior]);

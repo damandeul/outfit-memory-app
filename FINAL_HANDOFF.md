@@ -9,7 +9,7 @@
 
 같은 사람들을 일주일에 한 번 만나는 댄스강사가 지난 착장과 겹치지 않도록 확인하고, 보유한 옷만으로 다음 코디를 고르는 모바일 우선 PWA를 구현했다.
 
-독립 QA에서 발견한 IndexedDB 실패 처리, 착장·옷 사진 처리 중 저장 경쟁, 중복 저장 경쟁 조건, 빈 핵심 조합 오경고, stale production QA와 무관한 서버 재사용 위험을 회귀 테스트 우선으로 수정했다. 수정 후 현재 코드에서 모든 자동·브라우저 품질 게이트가 통과했다.
+독립 QA에서 발견한 IndexedDB 실패 처리, 착장·옷 사진 처리 중 저장 경쟁, 중복 경고 override 사진 경쟁, 중복 저장 경쟁 조건, 빈 핵심 조합 오경고, stale production QA와 무관한 서버 재사용 위험을 회귀 테스트 우선으로 수정했다. 수정 후 현재 코드에서 모든 자동·브라우저 품질 게이트가 통과했다.
 
 ## 2. 구현 기능
 
@@ -47,11 +47,11 @@
 
 | 게이트 | 결과 |
 |---|---|
-| Vitest | 7 files, **30/30 통과** |
+| Vitest | 7 files, **31/31 통과** |
 | lint | 통과 |
 | TypeScript typecheck | 통과 |
 | production build | 통과, 36 modules |
-| PWA build | precache 7 entries / 226.90 KiB |
+| PWA build | precache 7 entries / 226.98 KiB |
 | 기본 모바일 E2E | **1/1 통과** |
 | fresh production 독립 QA | **7/7 통과** |
 | production dependency audit | 취약점 0 |

@@ -6,7 +6,7 @@
 
 ## 구현 결과
 
-React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 옷장 CRUD/보관, 착장 기록과 snapshot, 동일·핵심 동일 조합 경고, 최근 4회 판정, 결정적 추천과 이유, 초안, 기록 목록, JSON 메타데이터 내보내기, 전체 삭제, 한국어 IME 방어, 사진 취소·압축·방향 반영, 390/768px 레이아웃, service worker 앱 셸을 포함한다.
+React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 옷장 CRUD/보관, 스마트폰 후면 카메라 촬영과 앨범 선택, 색상·카테고리 기반 이름 제안, 착장 기록과 snapshot, 동일·핵심 동일 조합 경고, 최근 4회 판정, 결정적 추천과 이유, 초안, 기록 목록, JSON 메타데이터 내보내기, 전체 삭제, 한국어 IME 방어, 사진 취소·압축·방향 반영, 390/768px 레이아웃, service worker 앱 셸을 포함한다.
 
 ## TDD RED → GREEN 실행 근거
 
@@ -31,15 +31,16 @@ React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 옷장
 
 ## 최종 검증
 
-- `npm install`: 성공, 540 packages
-- `npm test`: 4 files, 11 tests PASS
+- `npm ci`: 성공, 539 packages 설치
+- `npm test`: 7 files, 31 tests PASS
 - `npm run test:e2e`: mobile Chromium 1/1 PASS
+- `npm run test:qa`: fresh production Chromium 7/7 PASS
 - `npm run lint`: PASS
 - `npm run typecheck`: PASS
 - `npm run build`: PASS
-  - 35 modules transformed
+  - 36 modules transformed
   - `dist/index.html`, JS/CSS, `manifest.webmanifest`, `sw.js`, Workbox 생성
-  - precache 7 entries, 223.39 KiB
+  - precache 7 entries, 226.98 KiB
 - `npm audit --omit=dev`: production dependencies 취약점 0
 - 반응형: E2E에서 390px와 768px `scrollWidth <= clientWidth` 확인
 - 지속성: E2E에서 옷 3개와 착장 저장 후 새로고침 조회 확인
@@ -62,5 +63,6 @@ React 19 + TypeScript + Vite + IndexedDB(idb) 기반 PWA를 구현했다. 옷장
 
 - 실제 iOS/Android 카메라의 EXIF 1/3/6/8 표본 방향은 실제 기기에서 별도 수동 확인이 필요하다. 구현은 `createImageBitmap(..., {imageOrientation:'from-image'})`를 사용한다.
 - 사진은 media store 분리 대신 garment/outfit record의 압축 data URL로 저장된다. 기능·외부 미전송·새로고침 지속성은 만족하지만, 대규모 옷장에서는 목록 읽기 비용이 커질 수 있어 후속 버전에서 Blob store 분리를 권장한다.
+- 옷·착장 사진 처리 중에는 일반 저장, 중복 경고 override, 초안 저장을 동기 lock과 disabled 상태로 차단하며 처리된 사진만 저장하는 회귀 테스트가 있다.
 - 개발 의존성 audit에는 상위 도구 체인의 high 경고가 있으나 `npm audit --omit=dev`는 0이다. 강제 audit fix는 major downgrade/변경 위험 때문에 실행하지 않았다.
 - 독립검수에서 CSS Google Fonts 원격 import를 발견해 회귀 테스트를 먼저 실패시킨 뒤 제거했다. 최종 production 스타일은 기기 내 시스템 글꼴만 사용하며 원격 스타일·폰트·이미지 URL을 포함하지 않는다.
