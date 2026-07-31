@@ -49,15 +49,23 @@
 
 `vite.config.js`와 `playwright.config.js`가 최신 `.ts` 설정과 다른 내용으로 남아 있었다. 도구별 권위 설정을 TypeScript 파일 하나로 고정하는 회귀 테스트를 먼저 실패시킨 뒤 두 stale 복사본을 제거하고 재생성 방지 ignore를 추가했다.
 
+### F-8. 옷 사진 압축 중 저장하면 사진 없는 레코드가 생성될 수 있음 — 수정 완료
+
+옷 사진 처리가 끝날 때까지 파일 입력과 저장 버튼을 잠그고 `사진 준비 중…` 상태를 표시한다. 처리 중 강제 submit이 IndexedDB 쓰기를 시작하지 않고, 완료 후 가공된 사진 data URL을 저장하는 회귀 테스트를 RED→GREEN으로 통과시켰다.
+
+### F-9. 핵심 옷이 없는 보조 아이템끼리 핵심 동일 경고가 발생함 — 수정 완료
+
+신발·액세서리만 선택한 서로 다른 조합의 빈 core key가 서로 일치하던 문제를 수정했다. 핵심 아이템 key가 비어 있으면 core 비교를 건너뛰며, 서로 다른 신발만 선택한 기록에 잘못된 경고가 나오지 않는 회귀 테스트를 추가했다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 7 files, 24 tests 통과 |
+| `npm test -- --reporter=verbose` | 7 files, 26 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.05 KiB |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.25 KiB |
 | `npm run test:e2e` | 기존 핵심 E2E 1/1 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
@@ -114,6 +122,8 @@
 - `src/App.tsx`
 - `src/App.failure.test.tsx`
 - `src/App.errors.test.tsx`
+- `src/domain.ts`
+- `src/domain.test.ts`
 - `src/privacy.test.ts`
 - `e2e/qa.spec.ts`
 - `playwright.qa.config.ts`

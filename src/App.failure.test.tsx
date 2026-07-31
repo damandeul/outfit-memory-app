@@ -69,6 +69,28 @@ describe('recoverable storage and photo failures', () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
   });
 
+  it('waits for garment photo processing and saves the processed photo', async () => {
+    let resolvePhoto!: (value: string) => void;
+    image.compressPhoto.mockImplementation(() => new Promise<string>(resolve => { resolvePhoto = resolve; }));
+    render(<App />);
+    await screen.findByText('아직 등록한 옷이 없어');
+    fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
+    fireEvent.change(screen.getByLabelText('옷 이름'), { target: { value: '검정 크롭티' } });
+    const file = new File(['photo'], 'outfit.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('옷 사진'), { target: { files: [file] } });
+    const processing = await screen.findByRole('button', { name: '사진 준비 중…' });
+    expect(processing).toBeDisabled();
+    fireEvent.submit(processing.closest('form')!);
+    expect(db.saveGarment).not.toHaveBeenCalled();
+    resolvePhoto('data:image/webp;base64,processed');
+    const save = await screen.findByRole('button', { name: '저장' });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(db.saveGarment).toHaveBeenCalledWith(expect.objectContaining({
+      photoDataUrl: 'data:image/webp;base64,processed',
+    })));
+  });
+
   it('shows outfit photo decode failure while preserving date, context and selections', async () => {
     db.getGarments.mockResolvedValue([top]);
     image.compressPhoto.mockRejectedValueOnce(new Error('이 사진을 열지 못했어.'));
