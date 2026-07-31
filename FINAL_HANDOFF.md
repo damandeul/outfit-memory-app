@@ -47,11 +47,11 @@
 
 | 게이트 | 결과 |
 |---|---|
-| Vitest | 7 files, **31/31 통과** |
+| Vitest | 7 files, **32/32 통과** |
 | lint | 통과 |
 | TypeScript typecheck | 통과 |
 | production build | 통과, 36 modules |
-| PWA build | precache 7 entries / 226.98 KiB |
+| PWA build | precache 7 entries / 227.04 KiB |
 | 기본 모바일 E2E | **1/1 통과** |
 | fresh production 독립 QA | **7/7 통과** |
 | production dependency audit | 취약점 0 |

@@ -103,6 +103,20 @@ describe('recoverable storage and photo failures', () => {
     await waitFor(() => expect(screen.getByLabelText('옷 이름')).toHaveValue('파랑 아우터'));
   });
 
+  it('uses the latest tags when photo processing finishes', async () => {
+    let resolvePhoto!: (value: string) => void;
+    image.compressPhoto.mockImplementation(() => new Promise<string>(resolve => { resolvePhoto = resolve; }));
+    render(<App />);
+    await screen.findByText('아직 등록한 옷이 없어');
+    fireEvent.click(screen.getByRole('button', { name: '옷 등록' }));
+    const file = new File(['photo'], 'jacket.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('카메라로 촬영'), { target: { files: [file] } });
+    fireEvent.change(screen.getByLabelText('카테고리'), { target: { value: 'OUTER' } });
+    fireEvent.change(screen.getByLabelText('주색상'), { target: { value: 'BLUE' } });
+    resolvePhoto('data:image/webp;base64,processed');
+    await waitFor(() => expect(screen.getByLabelText('옷 이름')).toHaveValue('파랑 아우터'));
+  });
+
   it('updates an automatic name with tags until the user edits it', async () => {
     image.compressPhoto.mockResolvedValueOnce('data:image/webp;base64,processed');
     render(<App />);

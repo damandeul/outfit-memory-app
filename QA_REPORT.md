@@ -69,15 +69,19 @@
 
 중복 경고가 열린 뒤 착장 사진 처리를 시작하면 `그대로 저장`이 활성 상태로 남아 사진 없는 착장을 확정할 수 있었다. 지연된 사진 Promise로 실패를 재현한 뒤 착장 사진용 동기 lock, `persist()` 방어 조건, 경고 override 비활성화를 함께 적용했다. 처리 중 저장 호출 0회와 처리 완료 후 가공된 `fullPhotoDataUrl` 저장을 회귀 테스트로 확인했다.
 
+### F-13. 옷 사진 처리 중 바꾼 태그가 이름 제안에 반영되지 않음 — 수정 완료
+
+비동기 사진 처리가 시작될 때의 카테고리·색상이 closure에 고정되어, 처리 중 태그를 바꾸면 완료 후 오래된 `검정 상의`가 제안됐다. 카테고리·색상 ref를 이벤트에서 동기 갱신하고 사진 완료 시 최신 ref를 읽도록 수정했다. 처리 중 `아우터`·`파랑`으로 바꾼 뒤 `파랑 아우터`가 제안되는 회귀 테스트를 RED→GREEN으로 확인했다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 7 files, 31 tests 통과 |
+| `npm test -- --reporter=verbose` | 7 files, 32 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
-| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.98 KiB |
+| `npm run build` | 통과, 36 modules, PWA precache 7 entries / 227.04 KiB |
 | `npm run test:e2e` | 기존 핵심 E2E 1/1 통과 |
 | `npm run test:qa` | fresh production build + 독립 QA 7/7 통과 |
 | `npm audit --omit=dev` | production 취약점 0 |
