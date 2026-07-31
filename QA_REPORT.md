@@ -57,12 +57,16 @@
 
 신발·액세서리만 선택한 서로 다른 조합의 빈 core key가 서로 일치하던 문제를 수정했다. 핵심 아이템 key가 비어 있으면 core 비교를 건너뛰며, 서로 다른 신발만 선택한 기록에 잘못된 경고가 나오지 않는 회귀 테스트를 추가했다.
 
+### F-10. 기본 E2E가 이미 실행 중인 다른 서버를 재사용할 수 있음 — 수정 완료
+
+기본 Playwright 설정의 `reuseExistingServer`를 `false`로 고정했다. 포트에 무관한 서버가 있으면 조용히 재사용하지 않고 실패하므로, 핵심 E2E가 현재 소스에서 시작한 개발 서버만 검사한다. 설정 회귀 테스트를 추가했다.
+
 ## 3. 최종 품질 게이트
 
 | 게이트 | 실제 결과 |
 |---|---|
 | `npm ci` | 성공, 539 packages 설치 |
-| `npm test -- --reporter=verbose` | 7 files, 26 tests 통과 |
+| `npm test -- --reporter=verbose` | 7 files, 27 tests 통과 |
 | `npm run lint` | 통과 |
 | `npm run typecheck` | 통과 |
 | `npm run build` | 통과, 36 modules, PWA precache 7 entries / 226.25 KiB |

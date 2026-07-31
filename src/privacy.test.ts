@@ -21,4 +21,9 @@ describe('privacy boundary', () => {
     expect(existsSync(resolve(process.cwd(), 'vite.config.js'))).toBe(false);
     expect(existsSync(resolve(process.cwd(), 'playwright.config.js'))).toBe(false);
   });
+
+  it('does not reuse an unrelated server during core E2E', () => {
+    const config = readFileSync(resolve(process.cwd(), 'playwright.config.ts'), 'utf8');
+    expect(config).toContain('reuseExistingServer:false');
+  });
 });
