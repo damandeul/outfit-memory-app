@@ -2,6 +2,12 @@
 
 같은 사람들을 다시 만날 때 이전 착장과 겹치지 않도록 돕는 로컬 우선 모바일 PWA입니다. 사진과 메타데이터는 브라우저 IndexedDB에만 저장하며 외부 API, 로그인, 분석 SDK를 사용하지 않습니다.
 
+## 공개 앱
+
+https://damandeul.github.io/outfit-memory-app/
+
+`main` 브랜치에 푸시하면 `.github/workflows/deploy-pages.yml`이 검증·빌드 후 GitHub Pages에 배포합니다.
+
 ## 실행
 
 ```bash
