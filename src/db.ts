@@ -1,3 +1,4 @@
+import {parseBackup} from './backup';
 import { openDB, type DBSchema } from 'idb';
 import type { Garment, Outfit } from './types';
 
@@ -112,4 +113,27 @@ export async function exportMetadata() {
     garments,
     outfits,
   };
+}
+
+export async function exportBackup() {
+ const db=await database();
+ const tx=db.transaction(['garments','outfits','drafts'],'readonly');
+ const [garments,confirmed,drafts]=await Promise.all([tx.objectStore('garments').getAll(),tx.objectStore('outfits').getAll(),tx.objectStore('drafts').getAll()]);
+ await tx.done;
+ const outfits=[...confirmed,...drafts].sort((a,b)=>b.localDate.localeCompare(a.localDate)||b.createdAt.localeCompare(a.createdAt));
+ return {app:'angyeopchyeo' as const,exportVersion:2 as const,exportedAt:new Date().toISOString(),containsImages:true as const,garments,outfits};
+}
+
+// Validate everything before opening a transaction; failed writes roll back the replacement.
+export async function restoreBackup(value:unknown) {
+ const data=parseBackup(value);
+ const db=await database();
+ const tx=db.transaction(['garments','outfits','drafts','media'],'readwrite');
+ try {
+  await Promise.all(['garments','outfits','drafts','media'].map(store=>tx.objectStore(store as 'garments'|'outfits'|'drafts'|'media').clear()));
+  for(const g of data.garments)await tx.objectStore('garments').put(g);
+  for(const o of data.outfits)await tx.objectStore(o.status==='DRAFT'?'drafts':'outfits').put(o);
+  await tx.done;
+ } catch(error) {try{tx.abort()}catch{/* Already aborted. */}await tx.done.catch(()=>{});throw error}
+ return data;
 }
